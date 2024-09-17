@@ -1,4 +1,4 @@
-import pymupdf, sys, re, os, time
+import pymupdf, argparse, sys, re, os, time
 from PIL import Image
 from pyzbar.pyzbar import decode
 
@@ -10,13 +10,13 @@ def list_to_dict(list):
     return dictionary
 
 # Variables
-PDF_keywords = [
+PDF_KEYWORDS = [
     "obj", "xref", "trailer", "startxref",
     "/Page", "/Encrypt", "/JS", "/JavaScript", "/AA", "/OpenAction", "/JBIG2Decode",
-    "RichMedia", "/Launch", "/XFA"
+    "/RichMedia", "/Launch", "/XFA"
 ]
 
-dict_keywords = list_to_dict(PDF_keywords)
+dict_keywords = list_to_dict(PDF_KEYWORDS)
 
 def extract_objects(doc_path):
     # Extracts all objects from a document
@@ -30,7 +30,7 @@ def extract_objects(doc_path):
             objects += doc.xref_object(xref, compressed=False)
         except:
             pymupdf.TOOLS.mupdf_display_errors(False)
-    return objects 
+    return objects
 
 def extract_single_object(doc_path, obj):
     # Extracts a single object from a document
@@ -52,6 +52,7 @@ def extract_keywords(doc_path, keywords):
     objects = extract_objects(doc_path) # Reuse extract_objects()
     found_keywords = dict_keywords
 
+    # Pattern matching
     for keyword in keywords:
         pattern = r"\b{}\b".format(keyword)
         matches = re.findall(pattern, objects)
@@ -70,7 +71,7 @@ def convert_to_images(doc_path):
             pix.save("page-%i.png" % page.number)
     except RuntimeError:
         print("Error converting PDF to image files")
-    decode_qr_codes("./")
+    return decode_qr_codes("./")
 
 # Decodes QR codes found in a folder
 def decode_qr_codes(path):
@@ -100,12 +101,46 @@ def decode_qr_codes(path):
             print(f"File not found: {filename}")
         except Exception as e:
             print(f"Error processing image: {filename} - {e}")
-    
-    print(decoded_data)
+    return decoded_data # Returns all QR data of the PDF document
 
 
 if __name__ == "__main__":
-    print("changes")
+
+    description = "Python PDF analysis tool"
+    parser = argparse.ArgumentParser(prog="pdetectif.py", description="Python")
+    parser.add_argument("-k", "--keywords", action="store_true", default=False,
+                    help="Extract predefined keywords")
+    parser.add_argument("-x", "--extract_object", type=int,
+                    help="Extract a specific object by number (requires -k)")
+    parser.add_argument("-i", "--images", action="store_true", default=False,
+                    help="Convert PDF pages to images and decode QR codes")
+    parser.add_argument("-o", "--objects", action="store_true", default=False,
+                    help="Extract all objects from the PDF")
+    parser.add_argument("pdf_file", help="Path to the PDF document")
+    
+    args = parser.parse_args()
+    
+
+    if args.keywords: 
+        extraction = extract_keywords(args.pdf_file, PDF_KEYWORDS)
+        if args.extract_object:
+            # Check object number validity and call extract_single_object()
+            if 1 <= args.extract_object <= len(extraction):
+                specific_object = extract_single_object(args.pdf_file, args.extract_object)
+                print(f"Object {args.extract_object}: {specific_object}")
+            else:
+                print(f"Invalid object number: {args.extract_object}")
+        else:
+            print(format_keywords(extraction))
+    elif args.objects:
+        objects = extract_objects(args.pdf_file)
+        print(objects)
+    elif args.images:
+        converted = convert_to_images(args.pdf_file)
+        print(converted)
+    else:
+        extraction = extract_keywords(args.pdf_file, PDF_KEYWORDS)
+        print(format_keywords(extraction))
     # document = sys.argv[1]
     # # pages = extract_objects(document)
     # # print(pages)
