@@ -105,7 +105,7 @@ def decode_qr_codes(path):
 
 
 if __name__ == "__main__":
-    
+    print()
     # document = sys.argv[1]
     # # pages = extract_objects(document)
     # # print(pages)
