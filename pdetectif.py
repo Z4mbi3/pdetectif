@@ -1,45 +1,116 @@
-import pymupdf, sys, re
+import pymupdf, sys, re, os, time
+from PIL import Image
+from pyzbar.pyzbar import decode
 
+# Util
+def list_to_dict(list):
+    dictionary = {}
+    for item in list:
+        dictionary[item] = 0
+    return dictionary
+
+# Variables
 PDF_keywords = [
-    "object", "xref", "trailer", "startxref",
+    "obj", "xref", "trailer", "startxref",
     "/Page", "/Encrypt", "/JS", "/JavaScript", "/AA", "/OpenAction", "/JBIG2Decode",
     "RichMedia", "/Launch", "/XFA"
 ]
 
-dict_keywords = {
-    "object": 0, "xref": 0, "trailer": 0, "startxref": 0,
-    "/Page": 0, "/Encrypt": 0, "/JS": 0, "/JavaScript": 0, "/AA": 0, "/OpenAction": 0, "/JBIG2Decode": 0,
-    "RichMedia": 0, "/Launch": 0, "/XFA": 0
-}
+dict_keywords = list_to_dict(PDF_keywords)
 
 def extract_objects(doc_path):
+    # Extracts all objects from a document
     doc = pymupdf.open(doc_path)
     objects = ""
     
     xreflen = doc.xref_length()
     for xref in range(1, xreflen):
         try:
-            objects += "\n\nobject %i | (stream: %s)\n\n" % (xref, doc.xref_is_stream(xref))
+            objects += "\n\nobj %i 0 R | (stream: %s)\n\n" % (xref, doc.xref_is_stream(xref))
             objects += doc.xref_object(xref, compressed=False)
         except:
             pymupdf.TOOLS.mupdf_display_errors(False)
-    return objects
+    return objects 
+
+def extract_single_object(doc_path, obj):
+    # Extracts a single object from a document
+    doc = pymupdf.open(doc_path)
+    try:
+        object = doc.xref_object(obj)
+        return object
+    except RuntimeError:
+        print("Object not found")
+
+def format_keywords(keywords):
+    # Formats
+    formatted_objects = ""
+    for keyword in keywords:
+        formatted_objects += "\n{}{}{}".format(keyword, (" " * (15 - len(keyword))) ,keywords[keyword])
+    return formatted_objects
 
 def extract_keywords(doc_path, keywords):
-    objects = extract_objects(doc_path)
+    objects = extract_objects(doc_path) # Reuse extract_objects()
     found_keywords = dict_keywords
 
     for keyword in keywords:
         pattern = r"\b{}\b".format(keyword)
         matches = re.findall(pattern, objects)
         found_keywords[keyword] = len(matches)
-    print(found_keywords)
+    return found_keywords
 
+# Visual Functionality
+def convert_to_images(doc_path):
+    doc = pymupdf.open(doc_path)
+    out_dir = "{}-{}".format(str(time.time()), doc.name)
+    os.mkdir(out_dir)
+    os.chdir(out_dir)
+    try:
+        for page in doc:
+            pix = page.get_pixmap()
+            pix.save("page-%i.png" % page.number)
+    except RuntimeError:
+        print("Error converting PDF to image files")
+    decode_qr_codes("./")
 
+# Decodes QR codes found in a folder
+def decode_qr_codes(path):
+    decoded_data = {}
+    page_number = 0
+
+    for filename in os.listdir(path):
+        page_number += 1  # Increment page number for each image
+
+        try:
+            img_path = os.path.join(path, filename)
+            img = Image.open(img_path)
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            qrcodes = decode(img)
+
+            if qrcodes:  # Check if any QR code was found
+                decoded_data[f"page-{page_number}"] = []
+                for qrcode in qrcodes:
+                    decoded_data[f"page-{page_number}"].append(
+                        qrcode.data.decode('utf-8')
+                    )
+            else:
+                print(f"No QR codes found in image: {filename}")
+        except FileNotFoundError:
+            print(f"File not found: {filename}")
+        except Exception as e:
+            print(f"Error processing image: {filename} - {e}")
+    
+    print(decoded_data)
 
 
 if __name__ == "__main__":
-    pages = extract_objects(sys.argv[1])
-    print(pages)
+    
+    # document = sys.argv[1]
+    # # pages = extract_objects(document)
+    # # print(pages)
 
-    extract_keywords(sys.argv[1], PDF_keywords)
+    # # extract_keywords(document, PDF_keywords)
+    # extraction = extract_keywords(document, PDF_keywords)
+    # print(format_keywords(extraction))
+    # convert_to_images(document)
