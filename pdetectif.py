@@ -59,10 +59,27 @@ def extract_keywords(doc_path, keywords):
         found_keywords[keyword] = len(matches)
     return found_keywords
 
+# Extract specific types from text (e.g. "URL", "EMAIL")
+def extract_from_text(doc_path, type):
+    if type == "URL":
+        regex = r"(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])"
+    if type == "EMAIL":
+        regex = r"([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+"
+    text = ""
+    matches = []
+    with pymupdf.open(doc_path) as doc:
+        for page in doc:
+            text += page.get_text()
+    for match in re.finditer(regex, text):
+        match = match.group()
+        print("[+] Found:", match)
+        matches.append(match)
+    print("[*] Total extracted", len(matches))
+
 # Visual Functionality
 def convert_to_images(doc_path):
     doc = pymupdf.open(doc_path)
-    out_dir = "{}-{}".format(str(time.time()), doc.name)
+    out_dir = "{}".format(str(time.time()))
     os.mkdir(out_dir)
     os.chdir(out_dir)
     try:
@@ -116,11 +133,14 @@ if __name__ == "__main__":
                     help="Convert PDF pages to images and decode QR codes")
     parser.add_argument("-o", "--objects", action="store_true", default=False,
                     help="Extract all objects from the PDF")
+    parser.add_argument("-u", "--urls", action="store_true", default=False,
+                    help="Extract all urls from the PDF")
+    parser.add_argument("-m", "--emails", action="store_true", default=False,
+                    help="Extract all emails from the PDF")
     parser.add_argument("pdf_file", help="Path to the PDF document")
     
     args = parser.parse_args()
     
-
     if args.keywords: 
         extraction = extract_keywords(args.pdf_file, PDF_KEYWORDS)
         if args.extract_object:
@@ -138,14 +158,10 @@ if __name__ == "__main__":
     elif args.images:
         converted = convert_to_images(args.pdf_file)
         print(converted)
+    elif args.urls:
+        extract_from_text(args.pdf_file, "URL")
+    elif args.emails:
+        extract_from_text(args.pdf_file, "EMAIL")
     else:
         extraction = extract_keywords(args.pdf_file, PDF_KEYWORDS)
         print(format_keywords(extraction))
-    # document = sys.argv[1]
-    # # pages = extract_objects(document)
-    # # print(pages)
-
-    # # extract_keywords(document, PDF_keywords)
-    # extraction = extract_keywords(document, PDF_keywords)
-    # print(format_keywords(extraction))
-    # convert_to_images(document)
