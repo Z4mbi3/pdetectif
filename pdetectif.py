@@ -4,6 +4,15 @@ from pyzbar.pyzbar import decode
 
 # Util
 def list_to_dict(list):
+    """
+    Converts a list into a dictionary with keys as list elements and values as 0.
+
+    Args:
+        list: The input list.
+
+    Returns:
+        dict: The created dictionary.
+    """
     dictionary = {}
     for item in list:
         dictionary[item] = 0
@@ -19,10 +28,18 @@ PDF_KEYWORDS = [
 dict_keywords = list_to_dict(PDF_KEYWORDS)
 
 def extract_objects(doc_path):
-    # Extracts all objects from a document
+    """
+    Extracts all objects from a PDF document.
+
+    Args:
+        doc_path (str): Path to the PDF document.
+
+    Returns:
+        str: A string containing all extracted objects.
+    """
     doc = pymupdf.open(doc_path)
     objects = ""
-    
+
     xreflen = doc.xref_length()
     for xref in range(1, xreflen):
         try:
@@ -32,24 +49,54 @@ def extract_objects(doc_path):
             pymupdf.TOOLS.mupdf_display_errors(False)
     return objects
 
+
+# ============== TODO: Code rewrite ==============
 def extract_single_object(doc_path, obj):
-    # Extracts a single object from a document
+    """
+    Extracts a single object from a PDF document by its number.
+
+    Args:
+        doc_path (str): Path to the PDF document.
+        obj (int): Number of the object to extract.
+
+    Returns:
+        str: The extracted object, or None if not found.
+    """
     doc = pymupdf.open(doc_path)
     try:
         object = doc.xref_object(obj)
         return object
     except RuntimeError:
         print("Object not found")
+# =================================================
 
 def format_keywords(keywords):
-    # Formats
+    """
+    Formats the extracted keywords for better readability.
+
+    Args:
+        keywords (dict): A dictionary containing keywords and their counts.
+
+    Returns:
+        str: The formatted string.
+    """
     formatted_objects = ""
     for keyword in keywords:
         formatted_objects += "\n{}{}{}".format(keyword, (" " * (15 - len(keyword))) ,keywords[keyword])
     return formatted_objects
 
 def extract_keywords(doc_path, keywords):
-    objects = extract_objects(doc_path) # Reuse extract_objects()
+    """
+    Extracts the occurrences of predefined keywords from a PDF document.
+
+    Args:
+        doc_path (str): Path to the PDF document.
+        keywords (list): List of keywords to search for.
+
+    Returns:
+        dict: A dictionary containing the keyword and its count.
+    """
+    objects = extract_objects(doc_path)
     found_keywords = dict_keywords
 
     # Pattern matching
@@ -61,6 +108,13 @@ def extract_keywords(doc_path, keywords):
 
 # Extract specific types from text (e.g. "URL", "EMAIL")
 def extract_from_text(doc_path, type):
+    """
+    Extracts specific types of text (e.g., URLs, emails) from a PDF document.
+
+    Args:
+        doc_path (str): Path to the PDF document.
+        type (str): The type of text to extract ("URL" or "EMAIL").
+    """
     if type == "URL":
         regex = r"(http|ftp|https):\/\/([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@?^=%&\/~+#-])"
     if type == "EMAIL":
@@ -78,6 +132,15 @@ def extract_from_text(doc_path, type):
 
 # Visual Functionality
 def convert_to_images(doc_path):
+    """
+    Converts a PDF document into images and decodes QR codes.
+
+    Args:
+        doc_path (str): Path to the PDF document.
+
+    Returns:
+        dict: A dictionary containing decoded QR codes per page.
+    """
     doc = pymupdf.open(doc_path)
     out_dir = "{}".format(str(time.time()))
     os.mkdir(out_dir)
@@ -92,6 +155,15 @@ def convert_to_images(doc_path):
 
 # Decodes QR codes found in a folder
 def decode_qr_codes(path):
+    """
+    Decodes QR codes from image files in a given directory.
+
+    Args:
+        path (str): Path to the directory containing image files.
+
+    Returns:
+        dict: A dictionary containing decoded QR code data per page.
+    """
     decoded_data = {}
     page_number = 0
 
@@ -120,11 +192,10 @@ def decode_qr_codes(path):
             print(f"Error processing image: {filename} - {e}")
     return decoded_data # Returns all QR data of the PDF document
 
-
-if __name__ == "__main__":
-
+# --------Application functionality--------
+def command_line():
     description = "Python PDF analysis tool"
-    parser = argparse.ArgumentParser(prog="pdetectif.py", description="Python")
+    parser = argparse.ArgumentParser(prog="pdetectif.py", description=description)
     parser.add_argument("-k", "--keywords", action="store_true", default=False,
                     help="Extract predefined keywords")
     parser.add_argument("-x", "--extract_object", type=int,
@@ -165,3 +236,6 @@ if __name__ == "__main__":
     else:
         extraction = extract_keywords(args.pdf_file, PDF_KEYWORDS)
         print(format_keywords(extraction))
+
+if __name__ == "__main__":
+    command_line()
