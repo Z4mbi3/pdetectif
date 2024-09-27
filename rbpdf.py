@@ -1,20 +1,24 @@
-import statistics
-import sys
+import sys, re
 
 def read_pdf(file):
     with open(file, 'rb') as doc:
-        # Try different encodings here (replace 'latin-1' with others if needed)
         try:
             text = doc.read().decode('latin-1')  # Common encoding for Western characters
-            print(text)
+            return text
         except UnicodeDecodeError:
             # Fallback to another encoding if latin-1 fails
             print("Error decoding with latin-1, trying UTF-16")
             try:
                 text = doc.read().decode('utf-16')
-                print(text)
+                return text
             except UnicodeDecodeError:
                 print("Decoding failed with both encodings")
 
+def match_regex(text):
+    matches = re.findall(r'stream([\s\S]*?)endstream', text)
+
+    for match in matches:
+        print("Captured Content:", match)
+
 if __name__ == "__main__":
-    read_pdf(sys.argv[1])
+    print(read_pdf(sys.argv[1]))

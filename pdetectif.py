@@ -20,14 +20,14 @@ def list_to_dict(list):
 
 # Variables
 PDF_KEYWORDS = [
-    "obj", "xref", "trailer", "startxref",
-    "/Page", "/Encrypt", "/JS", "/JavaScript", "/AA", "/OpenAction", "/JBIG2Decode",
-    "/RichMedia", "/Launch", "/XFA"
+    "obj", "endobj", "stream", "endstream", "xref", "trailer", "startxref",
+    "/Pages", "/Encrypt", "/JS", "/JavaScript", "/AA", "/OpenAction", "/JBIG2Decode",
+    "/RichMedia", "/Launch", "/XFA", "/URI"
 ]
 
 dict_keywords = list_to_dict(PDF_KEYWORDS)
 
-def extract_objects(doc_path):
+def read_pdf(doc_path):
     """
     Extracts all objects from a PDF document.
 
@@ -37,17 +37,18 @@ def extract_objects(doc_path):
     Returns:
         str: A string containing all extracted objects.
     """
-    doc = pymupdf.open(doc_path)
-    objects = ""
-
-    xreflen = doc.xref_length()
-    for xref in range(1, xreflen):
+    with open(doc_path, 'rb') as doc:
         try:
-            objects += "\n\nobj %i 0 R | (stream: %s)\n\n" % (xref, doc.xref_is_stream(xref))
-            objects += doc.xref_object(xref, compressed=False)
-        except:
-            pymupdf.TOOLS.mupdf_display_errors(False)
-    return objects
+            text = doc.read().decode('latin-1')  # Common encoding for Western characters
+            return text
+        except UnicodeDecodeError:
+            # Fallback to another encoding if latin-1 fails
+            print("Error decoding with latin-1, trying UTF-16")
+            try:
+                text = doc.read().decode('utf-16')
+                return text
+            except UnicodeDecodeError:
+                print("Decoding failed with both encodings")
 
 
 # ============== TODO: Code rewrite ==============
@@ -96,12 +97,18 @@ def extract_keywords(doc_path, keywords):
     Returns:
         dict: A dictionary containing the keyword and its count.
     """
-    objects = extract_objects(doc_path)
+    objects = read_pdf(doc_path)
     found_keywords = dict_keywords
 
     # Pattern matching
     for keyword in keywords:
-        pattern = r"\b{}\b".format(keyword)
+        if keyword == "/URI":
+            pattern = r"(?<!/S )" + re.escape(keyword) + r"(?! [/\w])"
+        if keyword == "/Pages":
+            pattern = r"<<\s*/Type\s*/Pages\s*/Count\s*(\d+)"
+        else:
+            pattern = r"\b" + re.escape(keyword)
+
         matches = re.findall(pattern, objects)
         found_keywords[keyword] = len(matches)
     return found_keywords
@@ -224,7 +231,7 @@ def command_line():
         else:
             print(format_keywords(extraction))
     elif args.objects:
-        objects = extract_objects(args.pdf_file)
+        objects = read_pdf(args.pdf_file)
         print(objects)
     elif args.images:
         converted = convert_to_images(args.pdf_file)
