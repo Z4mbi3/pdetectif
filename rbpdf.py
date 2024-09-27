@@ -15,10 +15,20 @@ def read_pdf(file):
                 print("Decoding failed with both encodings")
 
 def match_regex(text):
-    matches = re.findall(r'stream([\s\S]*?)endstream', text)
+    matches = re.findall(r"\d+\s+\d+\s+obj.*?endobj", text, re.DOTALL)
 
-    for match in matches:
-        print("Captured Content:", match)
+    print("\n\n".join(matches))
+    
+def match_obj(obj_num, text):
+    matches = re.findall(r"%i+\s+\d+\s+obj.*?endobj" % obj_num, text, re.DOTALL)
+    
+    # Check if no matches were found
+    if not matches:
+        print(f"No matches found for object {obj_num}.")
+    else:
+        # Print all matches with double newlines for clarity
+        output = "\n\n".join(matches)
+        print(f"\n{output}\n")
 
 if __name__ == "__main__":
-    print(read_pdf(sys.argv[1]))
+    match_regex(read_pdf(sys.argv[1]))

@@ -71,6 +71,12 @@ def extract_single_object(doc_path, obj):
         print("Object not found")
 # =================================================
 
+def extract_all_objects(contents):
+    pattern = r"obj([\s\S]*?)endobj'"
+    matches = re.findall(pattern, contents)
+    for match in matches:
+        print(match)
+
 def format_keywords(keywords):
     """
     Formats the extracted keywords for better readability.
@@ -97,7 +103,7 @@ def extract_keywords(doc_path, keywords):
     Returns:
         dict: A dictionary containing the keyword and its count.
     """
-    objects = read_pdf(doc_path)
+    contents = read_pdf(doc_path)
     found_keywords = dict_keywords
 
     # Pattern matching
@@ -109,9 +115,11 @@ def extract_keywords(doc_path, keywords):
         else:
             pattern = r"\b" + re.escape(keyword)
 
-        matches = re.findall(pattern, objects)
+        matches = re.findall(pattern, contents)
         found_keywords[keyword] = len(matches)
     return found_keywords
+
+
 
 # Extract specific types from text (e.g. "URL", "EMAIL")
 def extract_from_text(doc_path, type):
