@@ -31,4 +31,4 @@ def match_obj(obj_num, text):
         print(f"\n{output}\n")
 
 if __name__ == "__main__":
-    match_regex(read_pdf(sys.argv[1]))
+    match_obj(1, read_pdf(sys.argv[1]))
