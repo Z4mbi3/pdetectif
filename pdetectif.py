@@ -56,22 +56,22 @@ def read_pdf(doc_path):
             except UnicodeDecodeError:
                 print("Decoding failed with both encodings")
 
-def extract_single_object(doc_path, obj_num):
+def extract_single_object(obj_num, contents):
     """
     Extracts a single object from a PDF document by its number.
 
     Args:
-        doc_path (str): Path to the PDF document.
         obj_num (int): Number of the object to extract.
-
+        contents (str): Contents of the PDF document.
+        
     Returns:
         str: The extracted object, or None if not found.
     """
-    doc = pymupdf.open(doc_path)
+    pattern = r"(?<!\d)" + str(obj_num) + r"\s+0\s+obj\b[\s\S]*?endobj\b"
     try:
-        object = doc.xref_object(obj_num)
-        return object
-    except RuntimeError:
+        match = re.findall(pattern, contents)
+        print(match)
+    except:
         print("Object not found")
 
 def extract_all_objects(contents):
@@ -213,23 +213,22 @@ def command_line():
                         help="Convert PDF pages to images and decode QR codes")
     parser.add_argument("-k", "--keywords", action="store_true", default=False,
                         help="Extract predefined keywords")
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-o", "--objects", action="store_true",
+    parser.add_argument("-o", "--objects", action="store_true",
                        help="Extract all objects from the PDF")
-    group.add_argument("-x", "--extract_object", type=int,
-                       help="Extract a specific object by number (requires -k)")
+    parser.add_argument("-x", "--extract_object", type=int,
+                       help="Extract a specific object by number")
     parser.add_argument("pdf_file", help="Path to the PDF document")
     parser.add_argument("-u", "--urls", action="store_true", default=False,
                         help="Extract all urls from the PDF")
 
     args = parser.parse_args()
     extraction = extract_keywords(args.pdf_file, PDF_KEYWORDS)
+    pdf_content = read_pdf(args.pdf_file)
 
     if args.extract_object:
         # Check object number validity and call extract_single_object()
-        if 1 <= args.extract_object <= len(extraction):  # Assuming extraction is defined elsewhere
-            specific_object = extract_single_object(args.pdf_file, args.extract_object)
-            print(f"{args.extract_object} 0 obj\n {specific_object}")
+        if 1 <= args.extract_object <= len(extraction):
+            extract_single_object(args.extract_object, pdf_content)
         else:
             print(f"Invalid object number: {args.extract_object}")
     elif args.objects:
@@ -243,7 +242,8 @@ def command_line():
     elif args.emails:
         extract_from_text(args.pdf_file, EXTRACT_PATTERNS["EMAIL"])
     else:
-        print("Please specify either -o or -x argument for object extraction.")
+        extracted = extract_keywords(args.pdf_file, PDF_KEYWORDS)
+        print(format_keywords(extracted))
 
 if __name__ == "__main__":
     command_line()
