@@ -96,7 +96,7 @@ class Analyzer:
         except:
             print("Object not found")
 
-    def extract_keywords(doc_path, keywords):
+    def extract_keywords(contents, keywords):
         """
         Extracts the occurrences of predefined keywords from a PDF document.
 
@@ -107,7 +107,6 @@ class Analyzer:
         Returns:
             dict: A dictionary containing the keyword and its count.
         """
-        contents = Analyzer.read_pdf(doc_path)["Contents"]
         found_keywords = dict_keywords
 
         # Pattern matching
@@ -123,7 +122,7 @@ class Analyzer:
             found_keywords[keyword] = len(matches)
         return found_keywords
 
-    def extract_from_text(doc_path, pattern):
+    def extract_from_text(contents, pattern):
         """
         Extracts specific patterns of text (e.g., URLs, emails) from a PDF document.
 
@@ -131,11 +130,10 @@ class Analyzer:
             doc_path (str): Path to the PDF document.
             pattern (str): The regex pattern to extract ("URL" or "EMAIL").
         """
-        text = Analyzer.read_pdf(doc_path)["Contents"]
         matches = []
         output = {}
         
-        for match in re.finditer(pattern, text):
+        for match in re.finditer(pattern, contents):
             match = match.group()
             matches.append(match)
         output["Matches"] = matches
@@ -210,7 +208,6 @@ class Analyzer:
                 print(f"Error processing image: {filename} - {e}")
         return decoded_data # Returns all QR data of the PDF document
 
-# !--------Application functionality--------
 def command_line():
     description = "Python PDF analysis tool"
     parser = argparse.ArgumentParser(prog="pdetectif.py", description=description)
@@ -239,19 +236,18 @@ def command_line():
         else:
             print(f"Invalid object number: {args.extract_object}")
     elif args.contents:
-        contents = Analyzer.read_pdf(args.pdf_file)["Contents"]
-        print(contents)
+        print(pdf_content)
     elif args.images:
         converted = Analyzer.convert_to_images(args.pdf_file)
         print(converted)
     elif args.urls:
-        result = Analyzer.extract_from_text(args.pdf_file, EXTRACT_PATTERNS["URL"])
+        result = Analyzer.extract_from_text(pdf_content, EXTRACT_PATTERNS["URL"])
         print(result)
     elif args.emails:
-        result = Analyzer.extract_from_text(args.pdf_file, EXTRACT_PATTERNS["EMAIL"])
+        result = Analyzer.extract_from_text(pdf_content, EXTRACT_PATTERNS["EMAIL"])
         print(result)
     else:
-        extracted = Analyzer.extract_keywords(args.pdf_file, PDF_KEYWORDS)
+        extracted = Analyzer.extract_keywords(pdf_content, PDF_KEYWORDS)
         print(Util.format_keywords(extracted))
 
 if __name__ == "__main__":
