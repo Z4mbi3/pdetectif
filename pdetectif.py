@@ -48,6 +48,10 @@ EXTRACT_PATTERNS = {
 dict_keywords = Util.list_to_dict(PDF_KEYWORDS)
 
 class Analyzer:
+
+    def __self__(self):
+        self.empty = None
+
     def read_pdf(doc_path):
         """
         Extracts all objects from a PDF document.
@@ -151,15 +155,21 @@ class Analyzer:
         """
         doc = pymupdf.open(doc_path)
         out_dir = "{}".format(str(time.time()))
+        page_number = 0
+        output = {}
         os.mkdir(out_dir)
         os.chdir(out_dir)
         try:
             for page in doc:
+                page_number += 1  # Increment page number for each image
                 pix = page.get_pixmap()
-                pix.save("page-%i.png" % page.number)
+                pix.save(f"page-{page_number}.png")
         except RuntimeError:
             print("Error converting PDF to image files")
-        return Analyzer.decode_qr_codes("./")
+        
+        output["ImagesPath"] = out_dir
+        output["QRData"] = Analyzer.decode_qr_codes("./")
+        return output
 
     # ! Decodes QR codes found in a folder
     def decode_qr_codes(path):
@@ -170,7 +180,7 @@ class Analyzer:
             path (str): Path to the directory containing image files.
 
         Returns:
-            dict: A dictionary containing decoded QR code data per page.
+            dict: A dictionary with a value containing decoded QR code data per page represented as a list.
         """
         decoded_data = {}
         page_number = 0
