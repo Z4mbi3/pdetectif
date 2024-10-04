@@ -49,9 +49,6 @@ dict_keywords = Util.list_to_dict(PDF_KEYWORDS)
 
 class Analyzer:
 
-    def __self__(self):
-        self.empty = None
-
     def read_pdf(doc_path):
         """
         Extracts all objects from a PDF document.
