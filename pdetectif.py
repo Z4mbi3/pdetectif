@@ -137,8 +137,7 @@ class Analyzer:
         output["Count"] = len(matches)
         return output
 
-    # ! Visual Functionality
-    def convert_to_images(doc_path):
+    def convert_to_images(doc_path, out_path):
         """
         Converts a PDF document into images and decodes QR codes.
 
@@ -152,11 +151,12 @@ class Analyzer:
         out_dir = "{}".format(str(time.time()))
         page_number = 0
         output = {}
+        os.chdir(out_path)
         os.mkdir(out_dir)
         os.chdir(out_dir)
         try:
             for page in doc:
-                page_number += 1  # Increment page number for each image
+                page_number += 1
                 pix = page.get_pixmap()
                 pix.save(f"page-{page_number}.png")
         except RuntimeError:
@@ -166,7 +166,6 @@ class Analyzer:
         output["QRData"] = Analyzer.decode_qr_codes("./")
         return output
 
-    # ! Decodes QR codes found in a folder
     def decode_qr_codes(path):
         """
         Decodes QR codes from image files in a given directory.
@@ -181,7 +180,7 @@ class Analyzer:
         page_number = 0
 
         for filename in os.listdir(path):
-            page_number += 1  # Increment page number for each image
+            page_number += 1
 
             try:
                 img_path = os.path.join(path, filename)
@@ -235,7 +234,7 @@ def command_line():
     elif args.contents:
         print(pdf_content)
     elif args.images:
-        converted = Analyzer.convert_to_images(args.pdf_file)
+        converted = Analyzer.convert_to_images(args.pdf_file, "files")
         print(converted)
     elif args.urls:
         result = Analyzer.extract_from_text(pdf_content, EXTRACT_PATTERNS["URL"])
